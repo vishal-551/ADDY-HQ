@@ -4,7 +4,8 @@ from dataclasses import dataclass
 
 from sqlalchemy.orm import Session
 
-from app.models import TaskCreate, TaskPriority, TaskStatus, TaskUpdate
+from app.models import TaskPriority, TaskStatus
+from app.schemas import TaskCreate, TaskUpdate
 from app.services.task_service import TaskService
 
 

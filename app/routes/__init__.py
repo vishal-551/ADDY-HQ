@@ -1,3 +1,3 @@
-from app.routes import bot, dashboard, tasks
+from app.routes import auth, bot, dashboard, guilds, tasks
 
-__all__ = ["tasks", "bot", "dashboard"]
+__all__ = ["auth", "tasks", "bot", "dashboard", "guilds"]
