@@ -8,16 +8,67 @@ from app.config import settings
 from app.core.dependencies import get_current_user, get_db_session
 from app.core.jwt_utils import InvalidOAuthStateError, create_oauth_state, verify_oauth_state
 from app.models import User
-from app.schemas import DiscordLoginResponse, MeResponse, SessionRead, UserRead
+from app.schemas import (
+    AuthTokens,
+    DiscordLoginResponse,
+    LogoutAllResponse,
+    MeResponse,
+    RefreshSessionRequest,
+    SessionRead,
+    UserRead,
+)
 from app.services.auth_service import AuthService
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
+def _set_auth_cookies(response: Response, tokens: dict) -> None:
+    response.set_cookie(
+        "access_token",
+        tokens["access_token"],
+        httponly=True,
+        secure=settings.cookie_secure,
+        samesite=settings.cookie_samesite,
+        domain=settings.cookie_domain,
+        max_age=settings.jwt_access_ttl_minutes * 60,
+    )
+    response.set_cookie(
+        "refresh_token",
+        tokens["refresh_token"],
+        httponly=True,
+        secure=settings.cookie_secure,
+        samesite=settings.cookie_samesite,
+        domain=settings.cookie_domain,
+        max_age=settings.jwt_refresh_ttl_days * 86400,
+    )
+    response.set_cookie(
+        "session_id",
+        tokens["session_id"],
+        httponly=True,
+        secure=settings.cookie_secure,
+        samesite=settings.cookie_samesite,
+        domain=settings.cookie_domain,
+        max_age=settings.jwt_refresh_ttl_days * 86400,
+    )
+
+
+def _clear_auth_cookies(response: Response) -> None:
+    response.delete_cookie("access_token", domain=settings.cookie_domain)
+    response.delete_cookie("refresh_token", domain=settings.cookie_domain)
+    response.delete_cookie("session_id", domain=settings.cookie_domain)
+
+
 @router.get("/login", response_model=DiscordLoginResponse)
 def login(response: Response, db: Session = Depends(get_db_session)):
     state = create_oauth_state()
-    response.set_cookie("oauth_state", state, httponly=True, max_age=600, samesite=settings.cookie_samesite, secure=settings.cookie_secure)
+    response.set_cookie(
+        "oauth_state",
+        state,
+        httponly=True,
+        max_age=600,
+        samesite=settings.cookie_samesite,
+        secure=settings.cookie_secure,
+    )
     return {"auth_url": AuthService(db).discord_auth_url(state)}
 
 
@@ -42,34 +93,20 @@ async def callback(
 
     response = RedirectResponse(f"{settings.frontend_url}/dashboard", status_code=302)
     response.delete_cookie("oauth_state")
-    response.set_cookie(
-        "access_token",
-        result["access_token"],
-        httponly=True,
-        secure=settings.cookie_secure,
-        samesite=settings.cookie_samesite,
-        domain=settings.cookie_domain,
-        max_age=settings.jwt_access_ttl_minutes * 60,
-    )
-    response.set_cookie(
-        "refresh_token",
-        result["refresh_token"],
-        httponly=True,
-        secure=settings.cookie_secure,
-        samesite=settings.cookie_samesite,
-        domain=settings.cookie_domain,
-        max_age=settings.jwt_refresh_ttl_days * 86400,
-    )
-    response.set_cookie(
-        "session_id",
-        result["session_id"],
-        httponly=True,
-        secure=settings.cookie_secure,
-        samesite=settings.cookie_samesite,
-        domain=settings.cookie_domain,
-        max_age=settings.jwt_refresh_ttl_days * 86400,
-    )
+    _set_auth_cookies(response, result)
     return response
+
+
+@router.post("/refresh", response_model=AuthTokens)
+def refresh_session(payload: RefreshSessionRequest, request: Request, response: Response, db: Session = Depends(get_db_session)):
+    refresh_token = payload.refresh_token or request.cookies.get("refresh_token")
+    session_id = request.cookies.get("session_id")
+    if not refresh_token or not session_id:
+        raise HTTPException(status_code=401, detail="Missing refresh token")
+
+    tokens = AuthService(db).refresh_session(session_id=session_id, refresh_token=refresh_token)
+    _set_auth_cookies(response, tokens)
+    return {**tokens, "token_type": "bearer"}
 
 
 @router.post("/logout")
@@ -77,10 +114,14 @@ def logout(request: Request, response: Response, db: Session = Depends(get_db_se
     sid = request.cookies.get("session_id")
     if sid:
         AuthService(db).logout(sid)
-    response.delete_cookie("access_token", domain=settings.cookie_domain)
-    response.delete_cookie("refresh_token", domain=settings.cookie_domain)
-    response.delete_cookie("session_id", domain=settings.cookie_domain)
+    _clear_auth_cookies(response)
     return {"ok": True}
+
+
+@router.post("/logout-all", response_model=LogoutAllResponse)
+def logout_all(user: User = Depends(get_current_user), db: Session = Depends(get_db_session)):
+    revoked = AuthService(db).logout_all(user_id=user.id)
+    return {"revoked_sessions": revoked}
 
 
 @router.get("/me", response_model=MeResponse)
