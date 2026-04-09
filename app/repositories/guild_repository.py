@@ -3,7 +3,8 @@ from __future__ import annotations
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models import Guild, GuildGeneralSettings
+from app.models import Guild, GuildGeneralSettings, GuildModule
+from shared.constants import MODULE_REGISTRY
 
 
 class GuildRepository:
@@ -48,6 +49,29 @@ class GuildRepository:
         self.db.flush()
         self.db.refresh(settings)
         return settings
+
+    def sync_modules(self, guild_id: int) -> list[GuildModule]:
+        existing_stmt = select(GuildModule).where(GuildModule.guild_id == guild_id)
+        existing = list(self.db.scalars(existing_stmt).all())
+        existing_by_key = {item.module_key: item for item in existing}
+        changed = False
+        for module in MODULE_REGISTRY:
+            module_key = module["slug"]
+            if module_key in existing_by_key:
+                continue
+            self.db.add(
+                GuildModule(
+                    guild_id=guild_id,
+                    module_key=module_key,
+                    enabled=False,
+                    config={"module_id": module["id"], "category": module["category"]},
+                )
+            )
+            changed = True
+        if changed:
+            self.db.flush()
+            existing = list(self.db.scalars(existing_stmt).all())
+        return sorted(existing, key=lambda item: item.module_key)
 
     def count_guilds(self) -> int:
         return int(self.db.scalar(select(func.count()).select_from(Guild)) or 0)

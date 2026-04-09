@@ -4,6 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import User
+from shared.security import hash_password, verify_password
 
 
 class UsersRepository:
@@ -45,3 +46,14 @@ class UsersRepository:
         self.db.flush()
         self.db.refresh(user)
         return user
+
+    def set_password(self, user: User, password: str) -> User:
+        user.password_hash = hash_password(password)
+        self.db.flush()
+        self.db.refresh(user)
+        return user
+
+    def verify_password(self, user: User, password: str) -> bool:
+        if not user.password_hash:
+            return False
+        return verify_password(password, user.password_hash)

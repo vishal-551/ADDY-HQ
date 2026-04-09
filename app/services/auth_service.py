@@ -15,6 +15,7 @@ from app.core.jwt_utils import (
     verify_token_hash,
 )
 from app.repositories.auth_repository import AuthRepository
+from app.repositories.users_repository import UsersRepository
 from app.services.discord_oauth_service import DiscordOAuthService
 
 
@@ -22,6 +23,7 @@ class AuthService:
     def __init__(self, db: Session):
         self.db = db
         self.repo = AuthRepository(db)
+        self.users = UsersRepository(db)
         self.oauth = DiscordOAuthService(db)
 
     def discord_auth_url(self, state: str) -> str:
@@ -105,3 +107,15 @@ class AuthService:
 
     def logout_all(self, user_id: int) -> int:
         return self.repo.revoke_all_user_sessions(user_id=user_id, revoked_at=datetime.now(UTC), reason="user_logout_all")
+
+    def set_user_password(self, user_id: int, password: str) -> None:
+        user = self.users.get_by_id(user_id)
+        if not user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        self.users.set_password(user, password)
+
+    def verify_user_password(self, user_id: int, password: str) -> bool:
+        user = self.users.get_by_id(user_id)
+        if not user:
+            return False
+        return self.users.verify_password(user, password)

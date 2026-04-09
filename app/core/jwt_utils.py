@@ -13,11 +13,11 @@ from shared.security import hash_password, verify_password
 
 
 class InvalidTokenError(Exception):
-    pass
+    """Raised when an access/refresh JWT token is malformed, invalid, or expired."""
 
 
 class InvalidOAuthStateError(Exception):
-    pass
+    """Raised when OAuth state cannot be validated."""
 
 
 def utcnow() -> datetime:
