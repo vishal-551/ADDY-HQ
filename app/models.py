@@ -206,6 +206,20 @@ class AuditLog(Base, IDMixin, TimestampMixin):
     guild: Mapped[Guild | None] = relationship(back_populates="audit_logs")
 
 
+class BotConfig(Base, IDMixin, TimestampMixin):
+    __tablename__ = "bot_configs"
+
+    name: Mapped[str] = mapped_column(String(120), nullable=False, unique=True, index=True)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="inactive", index=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, index=True)
+    token_encrypted: Mapped[str] = mapped_column(Text, nullable=False)
+    client_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    client_secret_encrypted: Mapped[str] = mapped_column(Text, nullable=False)
+    redirect_uri: Mapped[str] = mapped_column(String(500), nullable=False)
+    owner_ids_csv: Mapped[str] = mapped_column(String(500), nullable=False, default="")
+    invite_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+
+
 GuildSettings = GuildGeneralSettings
 PremiumSubscription = GuildPremium
 AccessGrant = GuildAccessGrant

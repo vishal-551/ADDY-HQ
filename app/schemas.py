@@ -190,3 +190,42 @@ class AdminStatsRead(BaseModel):
     sessions: int
     active_premium: int
     audit_logs: int
+
+
+class AdminBotConfigCreate(BaseModel):
+    name: str = Field(min_length=2, max_length=120)
+    token: str = Field(min_length=20, max_length=500)
+    client_id: str = Field(min_length=5, max_length=64)
+    client_secret: str = Field(min_length=20, max_length=500)
+    redirect_uri: str = Field(min_length=8, max_length=500)
+    owner_ids: list[int] = Field(default_factory=list)
+    invite_url: str | None = Field(default=None, max_length=500)
+    status: str = Field(default="inactive", pattern="^(active|inactive)$")
+    is_active: bool = False
+
+
+class AdminBotConfigUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=2, max_length=120)
+    token: str | None = Field(default=None, min_length=20, max_length=500)
+    client_id: str | None = Field(default=None, min_length=5, max_length=64)
+    client_secret: str | None = Field(default=None, min_length=20, max_length=500)
+    redirect_uri: str | None = Field(default=None, min_length=8, max_length=500)
+    owner_ids: list[int] | None = None
+    invite_url: str | None = Field(default=None, max_length=500)
+    status: str | None = Field(default=None, pattern="^(active|inactive)$")
+    is_active: bool | None = None
+
+
+class AdminBotConfigRead(BaseModel):
+    id: int
+    name: str
+    status: str
+    is_active: bool
+    client_id: str
+    redirect_uri: str
+    owner_ids: list[int]
+    invite_url: str | None
+    token_configured: bool
+    client_secret_configured: bool
+    created_at: datetime
+    updated_at: datetime

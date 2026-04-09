@@ -7,6 +7,7 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.config import settings
+from app.services.bot_config_service import BotConfigService
 
 
 class DiscordOAuthService:
@@ -14,10 +15,13 @@ class DiscordOAuthService:
         self.db = db
 
     def auth_url(self, state: str) -> str:
+        active = BotConfigService(self.db).get_active_discord_config()
+        client_id = active.client_id if active else settings.discord_client_id
+        redirect_uri = active.redirect_uri if active else settings.discord_redirect_uri
         query = urlencode(
             {
-                "client_id": settings.discord_client_id,
-                "redirect_uri": settings.discord_redirect_uri,
+                "client_id": client_id,
+                "redirect_uri": redirect_uri,
                 "response_type": "code",
                 "scope": "identify guilds email",
                 "state": state,
@@ -27,15 +31,19 @@ class DiscordOAuthService:
         return f"https://discord.com/oauth2/authorize?{query}"
 
     async def exchange_code(self, code: str) -> tuple[dict, dict]:
+        active = BotConfigService(self.db).get_active_discord_config()
+        client_id = active.client_id if active else settings.discord_client_id
+        client_secret = active.client_secret if active else settings.discord_client_secret
+        redirect_uri = active.redirect_uri if active else settings.discord_redirect_uri
         async with httpx.AsyncClient(timeout=20) as client:
             token_resp = await client.post(
                 f"{settings.discord_api_base}/oauth2/token",
                 data={
-                    "client_id": settings.discord_client_id,
-                    "client_secret": settings.discord_client_secret,
+                    "client_id": client_id,
+                    "client_secret": client_secret,
                     "grant_type": "authorization_code",
                     "code": code,
-                    "redirect_uri": settings.discord_redirect_uri,
+                    "redirect_uri": redirect_uri,
                 },
                 headers={"Content-Type": "application/x-www-form-urlencoded"},
             )
