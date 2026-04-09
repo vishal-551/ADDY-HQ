@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin • Bot Configuration</title>
+  <style>
+    :root { color-scheme: dark; }
+    body { margin: 0; font-family: Inter, Arial, sans-serif; background: #0b1020; color: #d9e3f0; }
+    .layout { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
+    .sidebar { background: #0f172b; border-right: 1px solid #22314f; padding: 20px; }
+    .sidebar h2 { margin-top: 0; font-size: 18px; color: #7dd3fc; }
+    .nav a { display: block; padding: 10px 12px; border-radius: 10px; margin: 6px 0; color: #b8c7dd; text-decoration: none; }
+    .nav a.active, .nav a:hover { background: #1f2b46; color: #fff; }
+    .content { padding: 24px; }
+    .card { background: #111a2f; border: 1px solid #273658; border-radius: 16px; padding: 18px; margin-bottom: 20px; }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(220px, 1fr)); gap: 12px; }
+    label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: #9db0cd; }
+    input, textarea { background: #0b1325; color: #eef4ff; border: 1px solid #2b3e67; border-radius: 10px; padding: 10px; }
+    textarea { min-height: 72px; }
+    button { background: #3b82f6; color: white; border: none; padding: 10px 14px; border-radius: 10px; cursor: pointer; }
+    button.secondary { background: #334155; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 10px; border-bottom: 1px solid #243455; font-size: 14px; }
+    .pill { font-size: 12px; padding: 4px 10px; border-radius: 999px; background: #19306c; color: #b7d1ff; }
+    .active-pill { background: #14532d; color: #b8f3cb; }
+    @media (max-width: 920px) { .layout { grid-template-columns: 1fr; } .sidebar { border-right: 0; border-bottom: 1px solid #22314f; } .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <h2>ADDY Admin</h2>
+    <nav class="nav">
+      <a href="/admin/panel/dashboard">Dashboard</a>
+      <a class="active" href="/admin/panel/bots">Bots</a>
+      <a href="/admin/panel/modules">Modules</a>
+      <a href="/admin/panel/guilds">Guilds</a>
+      <a href="/admin/panel/premium">Premium</a>
+      <a href="/admin/panel/offers">Offers</a>
+      <a href="/admin/panel/promo-codes">Promo Codes</a>
+      <a href="/admin/panel/customers">Customers</a>
+      <a href="/admin/panel/billing">Billing</a>
+      <a href="/admin/panel/audit-logs">Audit Logs</a>
+      <a href="/admin/panel/system-health">System Health</a>
+    </nav>
+  </aside>
+  <main class="content">
+    <section class="card">
+      <h1>Bot Configuration</h1>
+      <p>Manage Discord credentials from UI. Sensitive values are encrypted at rest.</p>
+      <form id="bot-form">
+        <div class="grid">
+          <label>Name <input name="name" required minlength="2" /></label>
+          <label>Client ID <input name="client_id" required /></label>
+          <label>Bot Token <input name="token" required /></label>
+          <label>Client Secret <input name="client_secret" required /></label>
+          <label>Redirect URI <input name="redirect_uri" required value="http://localhost:8000/auth/callback" /></label>
+          <label>Invite URL <input name="invite_url" /></label>
+          <label>Owner IDs (comma separated) <input name="owner_ids" placeholder="123,456" /></label>
+          <label>Status
+            <select name="status">
+              <option value="inactive">inactive</option>
+              <option value="active">active</option>
+            </select>
+          </label>
+        </div>
+        <p><label><input type="checkbox" name="is_active" /> Set as active bot</label></p>
+        <button type="submit">Save Bot Config</button>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>Configured Bots</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th><th>Status</th><th>Client ID</th><th>Secrets</th><th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="bot-rows"></tbody>
+      </table>
+    </section>
+  </main>
+</div>
+<script>
+  const form = document.getElementById("bot-form");
+  const rows = document.getElementById("bot-rows");
+
+  function parseOwnerIds(value) {
+    return value.split(",").map(v => v.trim()).filter(Boolean).map(v => Number(v)).filter(v => Number.isFinite(v));
+  }
+
+  async function loadBots() {
+    const resp = await fetch("/admin/bots", { credentials: "include" });
+    if (!resp.ok) { rows.innerHTML = `<tr><td colspan="5">Unauthorized or failed to load.</td></tr>`; return; }
+    const bots = await resp.json();
+    rows.innerHTML = bots.map((bot) => `
+      <tr>
+        <td>${bot.name} ${bot.is_active ? '<span class="pill active-pill">active</span>' : ''}</td>
+        <td><span class="pill">${bot.status}</span></td>
+        <td>${bot.client_id}</td>
+        <td>token:${bot.token_configured ? "✅" : "❌"} secret:${bot.client_secret_configured ? "✅" : "❌"}</td>
+        <td><button class="secondary" onclick="activateBot(${bot.id})">Set Active</button></td>
+      </tr>
+    `).join("") || `<tr><td colspan="5">No bots configured.</td></tr>`;
+  }
+
+  async function activateBot(botId) {
+    await fetch(`/admin/bots/${botId}/activate`, { method: "POST", credentials: "include" });
+    await loadBots();
+  }
+  window.activateBot = activateBot;
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const fd = new FormData(form);
+    const payload = Object.fromEntries(fd.entries());
+    payload.is_active = fd.get("is_active") === "on";
+    payload.owner_ids = parseOwnerIds(payload.owner_ids || "");
+    const resp = await fetch("/admin/bots", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (resp.ok) {
+      form.reset();
+      await loadBots();
+      return;
+    }
+    alert("Failed to save bot configuration");
+  });
+
+  loadBots();
+</script>
+</body>
+</html>

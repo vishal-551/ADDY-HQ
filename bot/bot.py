@@ -3,6 +3,7 @@ from __future__ import annotations
 from discord.ext import commands
 
 from bot.config.bot_config import get_bot_runtime_config
+from bot.config.discord_credentials import load_discord_credentials
 from bot.core.client import AddyClient
 from bot.core.intents import build_intents
 from bot.core.startup import on_startup
@@ -35,8 +36,9 @@ class AddyBot(AddyClient):
 
 async def run_bot() -> None:
     bot = AddyBot()
-    token = bot.settings.discord_bot_token
+    creds = load_discord_credentials()
+    token = creds.token
     if not token:
-        raise RuntimeError("DISCORD_BOT_TOKEN is required")
-    log.info("bot_start", user_cache_enabled=True)
+        raise RuntimeError("Discord bot token is required (configure via admin panel or env)")
+    log.info("bot_start", user_cache_enabled=True, credentials_source=creds.source)
     await bot.start(token)
