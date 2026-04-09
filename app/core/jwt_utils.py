@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import hmac
 import secrets
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -11,6 +12,10 @@ from app.config import settings
 
 
 class InvalidTokenError(Exception):
+    pass
+
+
+class InvalidOAuthStateError(Exception):
     pass
 
 
@@ -57,3 +62,28 @@ def generate_session_id() -> str:
 
 def hash_token(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def create_oauth_state(ttl_seconds: int = 600) -> str:
+    issued_at = int(utcnow().timestamp())
+    nonce = secrets.token_urlsafe(18)
+    raw = f"{issued_at}.{ttl_seconds}.{nonce}"
+    sig = hmac.new(settings.jwt_secret.encode("utf-8"), raw.encode("utf-8"), hashlib.sha256).hexdigest()
+    return f"{raw}.{sig}"
+
+
+def verify_oauth_state(state: str) -> None:
+    try:
+        issued_at_raw, ttl_raw, nonce, sig = state.split(".", 3)
+    except ValueError as exc:
+        raise InvalidOAuthStateError("OAuth state is malformed") from exc
+
+    raw = f"{issued_at_raw}.{ttl_raw}.{nonce}"
+    expected_sig = hmac.new(settings.jwt_secret.encode("utf-8"), raw.encode("utf-8"), hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(expected_sig, sig):
+        raise InvalidOAuthStateError("OAuth state signature mismatch")
+
+    issued_at = int(issued_at_raw)
+    ttl_seconds = int(ttl_raw)
+    if int(utcnow().timestamp()) > issued_at + ttl_seconds:
+        raise InvalidOAuthStateError("OAuth state expired")

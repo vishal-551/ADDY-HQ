@@ -10,7 +10,7 @@ from app.core.dependencies import (
     get_premium_service,
     get_settings_service,
 )
-from app.core.guards import ensure_guild_access
+from app.core.guards import ensure_owner_or_admin
 from app.models import User
 from app.schemas import (
     AccessStatusResponse,
@@ -40,7 +40,7 @@ def guild_overview(guild_id: int, user: User = Depends(get_current_user), servic
     data = service.get_overview(guild_id)
     if not data:
         raise HTTPException(status_code=404, detail="Guild not found")
-    ensure_guild_access(user.discord_id, data["guild"].owner_discord_id)
+    ensure_owner_or_admin(user.discord_id, data["guild"].owner_discord_id, user.is_admin)
     return data
 
 
@@ -54,7 +54,7 @@ def get_general_settings(
     guild = guild_service.get_overview(guild_id)
     if not guild:
         raise HTTPException(status_code=404, detail="Guild not found")
-    ensure_guild_access(user.discord_id, guild["guild"].owner_discord_id)
+    ensure_owner_or_admin(user.discord_id, guild["guild"].owner_discord_id, user.is_admin)
     return service.get(guild_id)
 
 
@@ -70,7 +70,7 @@ def update_general_settings(
     guild = guild_service.get_overview(guild_id)
     if not guild:
         raise HTTPException(status_code=404, detail="Guild not found")
-    ensure_guild_access(user.discord_id, guild["guild"].owner_discord_id)
+    ensure_owner_or_admin(user.discord_id, guild["guild"].owner_discord_id, user.is_admin)
     out = settings_service.update(guild_id, payload.model_dump(exclude_unset=True))
     audit.log(actor_user_id=user.id, actor_type="user", action="guild.settings.update", guild_id=guild_id)
     return out
@@ -86,7 +86,7 @@ def premium_status(
     guild = guild_service.get_overview(guild_id)
     if not guild:
         raise HTTPException(status_code=404, detail="Guild not found")
-    ensure_guild_access(user.discord_id, guild["guild"].owner_discord_id)
+    ensure_owner_or_admin(user.discord_id, guild["guild"].owner_discord_id, user.is_admin)
     return service.get_status(guild_id)
 
 
@@ -101,7 +101,7 @@ def access_history(
     guild = guild_service.get_overview(guild_id)
     if not guild:
         raise HTTPException(status_code=404, detail="Guild not found")
-    ensure_guild_access(user.discord_id, guild["guild"].owner_discord_id)
+    ensure_owner_or_admin(user.discord_id, guild["guild"].owner_discord_id, user.is_admin)
     return service.access_history(guild_id, limit=limit)
 
 
@@ -115,7 +115,7 @@ def customer_identity(
     guild = guild_service.get_overview(guild_id)
     if not guild:
         raise HTTPException(status_code=404, detail="Guild not found")
-    ensure_guild_access(user.discord_id, guild["guild"].owner_discord_id)
+    ensure_owner_or_admin(user.discord_id, guild["guild"].owner_discord_id, user.is_admin)
     return service.guild_identities(guild_id)
 
 
