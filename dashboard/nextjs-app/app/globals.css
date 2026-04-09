@@ -144,3 +144,11 @@ nav { display: flex; gap: 14px; flex-wrap: wrap; }
   .hero { grid-template-columns: 1fr; }
   .dash-topbar { flex-direction: column; align-items: flex-start; }
 }
+
+.guild-select { min-width: 220px; }
+
+@media (max-width: 640px) {
+  .nav-shell { padding: 12px; }
+  .dash-topbar-actions { width: 100%; flex-direction: column; }
+  .guild-select { min-width: 100%; }
+}

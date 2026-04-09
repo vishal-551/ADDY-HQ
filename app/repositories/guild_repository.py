@@ -73,5 +73,20 @@ class GuildRepository:
             existing = list(self.db.scalars(existing_stmt).all())
         return sorted(existing, key=lambda item: item.module_key)
 
+
+    def get_module(self, guild_id: int, module_key: str) -> GuildModule | None:
+        stmt = select(GuildModule).where(GuildModule.guild_id == guild_id, GuildModule.module_key == module_key)
+        return self.db.scalar(stmt)
+
+    def update_module(self, guild_id: int, module_key: str, *, enabled: bool) -> GuildModule | None:
+        module = self.get_module(guild_id, module_key)
+        if not module:
+            return None
+        module.enabled = enabled
+        self.db.add(module)
+        self.db.flush()
+        self.db.refresh(module)
+        return module
+
     def count_guilds(self) -> int:
         return int(self.db.scalar(select(func.count()).select_from(Guild)) or 0)
