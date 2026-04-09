@@ -1,28 +1,27 @@
-import { moduleCatalog } from "../_data";
+import { DashboardModuleCard } from "@/components/dashboard/module-card";
+import { fetchWithFallback, type GuildModuleCard } from "@/lib/api";
 
-export default function ModulesPage() {
+const fallbackModules: GuildModuleCard[] = [
+  { key: "general", icon: "🤖", title: "Addy Main Bot", description: "Core utility and slash commands.", tier: "free", enabled: true, connected: true, available: true, invite_url: "/invite", manage_url: "/dashboard/settings/general" },
+  { key: "welcome", icon: "👋", title: "Addy Welcome", description: "Onboarding and auto-role flows.", tier: "free", enabled: true, connected: true, available: true, invite_url: "/invite", manage_url: "/dashboard/settings/welcome" },
+  { key: "moderation", icon: "🛡️", title: "Addy Moderation", description: "Smart moderation actions and logs.", tier: "free", enabled: true, connected: true, available: true, invite_url: "/invite", manage_url: "/dashboard/settings/moderation" },
+  { key: "youtube", icon: "▶️", title: "Addy YouTube", description: "Creator upload tracking.", tier: "premium", enabled: false, connected: false, available: false, invite_url: "/invite", manage_url: "/dashboard/settings/youtube" },
+  { key: "tickets", icon: "🎫", title: "Addy Tickets", description: "Support ticket channels.", tier: "premium", enabled: true, connected: true, available: true, invite_url: "/invite", manage_url: "/dashboard/settings/tickets" },
+  { key: "ai", icon: "✨", title: "Addy AI", description: "AI moderation and assistant.", tier: "premium", enabled: false, connected: false, available: false, invite_url: "/invite", manage_url: "/dashboard/settings/ai" },
+  { key: "levels", icon: "🏆", title: "Addy Levels", description: "XP, leaderboards, rewards.", tier: "free", enabled: true, connected: true, available: true, invite_url: "/invite", manage_url: "/dashboard/settings/levels" },
+];
+
+export default async function ModulesPage({ searchParams }: { searchParams: { guild?: string } }) {
+  const guildId = Number(searchParams.guild ?? 101);
+  const modules = await fetchWithFallback<GuildModuleCard[]>(`/guilds/${guildId}/modules`, fallbackModules);
+
   return (
     <section>
       <h2>Module System</h2>
-      <p className="muted">Enable premium modules and configure integrations in one place.</p>
+      <p className="muted">Activate and configure every Addy bot module at guild level.</p>
       <div className="grid grid-3">
-        {moduleCatalog.map((module) => (
-          <article key={module.name} className="card module-tile">
-            <div className="row space-between">
-              <h3>{module.name}</h3>
-              {module.premium ? <span className="badge premium">Premium</span> : <span className="badge free">Free</span>}
-            </div>
-            <div className="toggle-row">
-              <span>Enabled</span>
-              <span className={`toggle ${module.enabled ? "enabled" : ""}`}>
-                <span className="knob" />
-              </span>
-            </div>
-            <div className="row gap">
-              <button className="btn btn-primary">Connect</button>
-              <button className="btn btn-dark">Manage</button>
-            </div>
-          </article>
+        {modules.map((module) => (
+          <DashboardModuleCard key={module.key} module={module} />
         ))}
       </div>
     </section>

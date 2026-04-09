@@ -19,3 +19,11 @@ class GuildService:
         settings = self.repo.get_or_create_general_settings(guild_id)
         modules = self.repo.sync_modules(guild_id)
         return {"guild": guild, "settings": settings, "modules": modules}
+
+
+    def list_modules(self, guild_id: int):
+        return self.repo.sync_modules(guild_id)
+
+    def set_module_enabled(self, guild_id: int, module_key: str, enabled: bool):
+        self.repo.sync_modules(guild_id)
+        return self.repo.update_module(guild_id, module_key, enabled=enabled)

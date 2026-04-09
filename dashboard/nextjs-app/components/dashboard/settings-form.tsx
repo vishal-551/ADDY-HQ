@@ -28,7 +28,7 @@ export function SettingsForm({
   async function onSave() {
     setStatus("Saving...");
     const result = await saveDashboardSettings(endpoint, values);
-    setStatus(result.ok ? `Saved: ${result.data.savedAt}` : result.message ?? "Save failed");
+    setStatus(result.ok ? `Saved: ${result.data?.savedAt ?? new Date().toISOString()}` : result.message ?? "Save failed");
   }
 
   return (

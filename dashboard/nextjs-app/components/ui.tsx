@@ -6,10 +6,9 @@ export function TopNav() {
     ["Home", "/"],
     ["Features", "/features"],
     ["Pricing", "/pricing"],
+    ["Docs", "/docs"],
+    ["Support", "/support"],
     ["Invite Bot", "/invite"],
-    ["Demo Dashboard", "/dashboard/demo"],
-    ["User", "/dashboard/user"],
-    ["Admin", "/dashboard/admin"],
   ];
 
   return (
@@ -22,9 +21,10 @@ export function TopNav() {
           </Link>
         ))}
       </nav>
-      <Link href="/login" className="btn btn-primary">
-        Login
-      </Link>
+      <div className="row gap">
+        <Link href="/dashboard" className="btn">Dashboard</Link>
+        <Link href="/login" className="btn btn-primary">Login</Link>
+      </div>
     </header>
   );
 }

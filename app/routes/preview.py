@@ -214,3 +214,32 @@ def demo_login() -> dict:
         },
         message="Demo login successful",
     )
+
+
+@router.get("/dashboard/home")
+def dashboard_home() -> dict:
+    return ok({
+        "stats": [
+            {"label": "Active members", "value": "14,892", "trend": "+6.4% vs last week"},
+            {"label": "Commands/day", "value": "42,308", "trend": "+12.1% automation"},
+            {"label": "Moderation actions", "value": "1,221", "trend": "-4.8% incidents"},
+            {"label": "AI safety score", "value": "98.2%", "trend": "+0.7 policy match"},
+        ],
+        "topUsers": [
+            {"user": "NovaKnight", "messages": 1880, "commands": 292, "trust": "High"},
+            {"user": "Asteria", "messages": 1730, "commands": 198, "trust": "High"},
+            {"user": "Cipher", "messages": 1212, "commands": 241, "trust": "Medium"},
+        ],
+        "activity": [44, 52, 63, 59, 72, 84, 90, 88, 96, 110, 103, 98],
+        "commandTraffic": [24, 20, 40, 54, 66, 52, 47, 58, 70, 76, 62, 55],
+        "logs": [
+            {"time": "14:02", "event": "Raid shield auto-blocked 19 joins", "level": "Critical"},
+            {"time": "13:48", "event": "Welcome flow A/B test published", "level": "Info"},
+            {"time": "13:12", "event": "Ticket category SLA updated", "level": "Warning"},
+        ],
+    })
+
+
+@router.get("/dashboard/admin")
+def dashboard_admin() -> dict:
+    return ok({"health": [{"service": "API Gateway", "status": "Operational", "latency": "112ms"}, {"service": "Discord Worker", "status": "Operational", "latency": "86ms"}, {"service": "Billing", "status": "Degraded", "latency": "283ms"}]})
