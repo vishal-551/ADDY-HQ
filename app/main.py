@@ -18,7 +18,7 @@ from app.middleware.http import (
     RequestContextMiddleware,
     StructuredLoggingMiddleware,
 )
-from app.routes import admin, auth, bot, dashboard, guilds, tasks
+from app.routes import admin, auth, bot, dashboard, guilds, preview, tasks
 from shared.logger import configure_logging
 from shared.response_builder import ok
 
@@ -86,6 +86,7 @@ def create_app() -> FastAPI:
     app.include_router(bot.router)
     app.include_router(guilds.router)
     app.include_router(admin.router)
+    app.include_router(preview.router)
     app.include_router(dashboard.router)
 
     return app
