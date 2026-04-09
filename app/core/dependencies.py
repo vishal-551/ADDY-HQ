@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.core.jwt_utils import decode_jwt
+from app.core.request_context import AuditActor
 from app.database import get_db
 from app.models import User
 from app.repositories.auth_repository import AuthRepository
@@ -59,6 +60,10 @@ def get_current_user(
     request.state.session_id = session_id
     request.state.session_expires_at = session.expires_at
     return user
+
+
+def get_current_audit_actor(user: User = Depends(get_current_user)) -> AuditActor:
+    return AuditActor(user_id=user.id, actor_type="user")
 
 
 def require_admin(user: User = Depends(get_current_user)) -> User:
