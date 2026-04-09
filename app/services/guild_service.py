@@ -17,4 +17,5 @@ class GuildService:
         if not guild:
             return None
         settings = self.repo.get_or_create_general_settings(guild_id)
-        return {"guild": guild, "settings": settings}
+        modules = self.repo.sync_modules(guild_id)
+        return {"guild": guild, "settings": settings, "modules": modules}

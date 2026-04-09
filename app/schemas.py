@@ -89,6 +89,7 @@ class GuildRead(BaseModel):
 class GuildOverviewResponse(BaseModel):
     guild: GuildRead
     settings: "GuildGeneralSettingsRead"
+    modules: list["GuildModuleRead"]
 
 
 class GuildGeneralSettingsRead(BaseModel):

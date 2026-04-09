@@ -50,4 +50,4 @@ class PremiumAccessService:
 
 
 class AccessService(PremiumAccessService):
-    pass
+    """Backward-compatible alias for PremiumAccessService."""

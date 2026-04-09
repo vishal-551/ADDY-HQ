@@ -37,4 +37,4 @@ class PremiumAccessRepository:
 
 
 class AccessRepository(PremiumAccessRepository):
-    pass
+    """Backward-compatible alias for PremiumAccessRepository."""
