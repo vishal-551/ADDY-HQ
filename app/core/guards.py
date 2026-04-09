@@ -29,6 +29,11 @@ def require_guild_premium(guild_id: int, db: Session) -> None:
         raise HTTPException(status_code=status.HTTP_402_PAYMENT_REQUIRED, detail="Premium required")
 
 
+def ensure_owner_or_admin(user_discord_id: int, guild_owner_discord_id: int, is_admin: bool) -> None:
+    if is_admin or user_discord_id == guild_owner_discord_id:
+        return
+    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Guild access denied")
+
+
 def ensure_guild_access(user_discord_id: int, guild_owner_discord_id: int) -> None:
-    if user_discord_id != guild_owner_discord_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Guild access denied")
+    ensure_owner_or_admin(user_discord_id=user_discord_id, guild_owner_discord_id=guild_owner_discord_id, is_admin=False)

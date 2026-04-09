@@ -3,7 +3,20 @@ from __future__ import annotations
 from datetime import datetime
 from enum import Enum
 
-from sqlalchemy import JSON, BigInteger, Boolean, DateTime, Enum as SAEnum, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint, func
+from sqlalchemy import (
+    JSON,
+    BigInteger,
+    Boolean,
+    DateTime,
+    Enum as SAEnum,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -15,7 +28,9 @@ class IDMixin:
 
 class TimestampMixin:
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
 
 
 class TaskStatus(str, Enum):
@@ -64,7 +79,9 @@ class Task(Base, IDMixin, TimestampMixin):
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str] = mapped_column(Text, default="", nullable=False)
     status: Mapped[TaskStatus] = mapped_column(SAEnum(TaskStatus), default=TaskStatus.pending, nullable=False, index=True)
-    priority: Mapped[TaskPriority] = mapped_column(SAEnum(TaskPriority), default=TaskPriority.medium, nullable=False, index=True)
+    priority: Mapped[TaskPriority] = mapped_column(
+        SAEnum(TaskPriority), default=TaskPriority.medium, nullable=False, index=True
+    )
     owner: Mapped[str] = mapped_column(String(120), default="unassigned", nullable=False)
 
 
@@ -104,9 +121,13 @@ class Guild(Base, TimestampMixin):
     icon: Mapped[str | None] = mapped_column(String(255), nullable=True)
     owner_discord_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
 
-    general_settings: Mapped[GuildGeneralSettings] = relationship(back_populates="guild", uselist=False, cascade="all, delete-orphan")
+    general_settings: Mapped[GuildGeneralSettings] = relationship(
+        back_populates="guild", uselist=False, cascade="all, delete-orphan"
+    )
     modules: Mapped[list[GuildModule]] = relationship(back_populates="guild", cascade="all, delete-orphan")
     premium: Mapped[GuildPremium | None] = relationship(back_populates="guild", uselist=False, cascade="all, delete-orphan")
+    access_grants: Mapped[list[GuildAccessGrant]] = relationship(back_populates="guild", cascade="all, delete-orphan")
+    customer_identities: Mapped[list[CustomerIdentity]] = relationship(back_populates="guild")
 
 
 class GuildGeneralSettings(Base, IDMixin, TimestampMixin):
@@ -160,6 +181,7 @@ class GuildAccessGrant(Base, IDMixin, TimestampMixin):
     ends_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     note: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
+    guild: Mapped[Guild] = relationship(back_populates="access_grants")
     user: Mapped[User | None] = relationship(back_populates="access_grants")
 
 
@@ -172,6 +194,8 @@ class CustomerIdentity(Base, IDMixin, TimestampMixin):
     provider: Mapped[str] = mapped_column(String(40), nullable=False, index=True)
     provider_customer_id: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
     email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+    guild: Mapped[Guild | None] = relationship(back_populates="customer_identities")
 
 
 class AuditLog(Base, IDMixin, TimestampMixin):
@@ -186,7 +210,6 @@ class AuditLog(Base, IDMixin, TimestampMixin):
     metadata_json: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
 
 
-# Backward compatibility aliases for pre-phase names.
 GuildSettings = GuildGeneralSettings
 PremiumSubscription = GuildPremium
 AccessGrant = GuildAccessGrant

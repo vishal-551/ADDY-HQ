@@ -3,13 +3,22 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 
 from app.config import settings
 from app.core.exceptions import register_exception_handlers
 from app.database import Base, async_engine, engine
-from app.middleware.http import AuditContextMiddleware, RateLimitMiddleware, RequestContextMiddleware
+from app.middleware.http import (
+    AuditContextMiddleware,
+    ErrorHandlingMiddleware,
+    RateLimitMiddleware,
+    RequestContextMiddleware,
+    StructuredLoggingMiddleware,
+)
 from app.routes import admin, auth, bot, dashboard, guilds, tasks
+from shared.logger import configure_logging
+from shared.response_builder import ok
 
 
 @asynccontextmanager
@@ -22,11 +31,26 @@ async def lifespan(_: FastAPI):
         engine.dispose()
 
 
+def _build_cors_origins() -> list[str]:
+    origins = {settings.frontend_url, settings.discord_redirect_uri.rsplit("/", 1)[0]}
+    return [origin for origin in origins if origin]
+
+
 def create_app() -> FastAPI:
+    configure_logging()
     app = FastAPI(title=settings.app_name, version="2.0.0", lifespan=lifespan)
 
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=_build_cors_origins(),
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    app.add_middleware(ErrorHandlingMiddleware)
     app.add_middleware(RequestContextMiddleware)
     app.add_middleware(AuditContextMiddleware)
+    app.add_middleware(StructuredLoggingMiddleware)
     app.add_middleware(RateLimitMiddleware)
     register_exception_handlers(app)
 
@@ -36,7 +60,7 @@ def create_app() -> FastAPI:
 
     @app.get("/health", tags=["system"])
     def health() -> dict:
-        return {"ok": True, "service": settings.app_name, "env": settings.app_env}
+        return ok({"service": settings.app_name, "env": settings.app_env})
 
     app.include_router(auth.router)
     app.include_router(tasks.router)

@@ -8,6 +8,7 @@ from app.repositories.access_repository import PremiumAccessRepository
 from app.repositories.audit_repository import AuditRepository
 from sqlalchemy import func, select
 
+from app.core.request_context import audit_context_var
 from app.models import Session as UserSession
 from app.models import User
 from app.repositories.guild_repository import GuildRepository
@@ -35,7 +36,7 @@ class AuditService:
             guild_id=guild_id,
             resource=resource,
             resource_id=resource_id,
-            metadata_json=metadata or {},
+            metadata_json={**audit_context_var.get(), **(metadata or {})},
         )
 
     def list_logs(self, guild_id: int | None = None, limit: int = 100):

@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-import secrets
-
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.core.dependencies import get_current_user, get_db_session
+from app.core.jwt_utils import InvalidOAuthStateError, create_oauth_state, verify_oauth_state
 from app.models import User
 from app.schemas import DiscordLoginResponse, MeResponse, SessionRead, UserRead
 from app.services.auth_service import AuthService
@@ -17,7 +16,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.get("/login", response_model=DiscordLoginResponse)
 def login(response: Response, db: Session = Depends(get_db_session)):
-    state = secrets.token_urlsafe(24)
+    state = create_oauth_state()
     response.set_cookie("oauth_state", state, httponly=True, max_age=600, samesite=settings.cookie_samesite)
     return {"auth_url": AuthService(db).discord_auth_url(state)}
 
@@ -30,8 +29,12 @@ async def callback(
     db: Session = Depends(get_db_session),
 ):
     cookie_state = request.cookies.get("oauth_state")
-    if cookie_state != state:
+    if not cookie_state or cookie_state != state:
         raise HTTPException(status_code=400, detail="OAuth state mismatch")
+    try:
+        verify_oauth_state(state)
+    except InvalidOAuthStateError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     service = AuthService(db)
     _, user_data = await service.exchange_code(code)
@@ -66,10 +69,12 @@ def logout(request: Request, response: Response, db: Session = Depends(get_db_se
 def me(request: Request, user: User = Depends(get_current_user)):
     return {
         "user": UserRead.model_validate(user),
-        "session": SessionRead(session_id=getattr(request.state, "session_id", ""), expires_at=user.updated_at),
+        "session": SessionRead(
+            session_id=getattr(request.state, "session_id", ""),
+            expires_at=getattr(request.state, "session_expires_at", user.updated_at),
+        ),
     }
 
 
-# Backward-compatible aliases from previous route names.
 router.add_api_route("/discord/login", login, methods=["GET"], response_model=DiscordLoginResponse)
 router.add_api_route("/discord/callback", callback, methods=["GET"])

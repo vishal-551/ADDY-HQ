@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 from fastapi import Depends, Header, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
@@ -19,32 +21,43 @@ def get_db_session(db: Session = Depends(get_db)) -> Session:
     return db
 
 
+def _get_access_token(request: Request, authorization: str | None) -> str:
+    if authorization and authorization.lower().startswith("bearer "):
+        return authorization.split(" ", 1)[1].strip()
+    token = request.cookies.get("access_token")
+    if token:
+        return token
+    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing auth token")
+
+
 def get_current_user(
     request: Request,
     db: Session = Depends(get_db_session),
     authorization: str | None = Header(default=None),
 ) -> User:
-    token = None
-    if authorization and authorization.lower().startswith("bearer "):
-        token = authorization.split(" ", 1)[1].strip()
-    if not token:
-        token = request.cookies.get("access_token")
-    if not token:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing auth token")
-
+    token = _get_access_token(request, authorization)
     payload = decode_jwt(token)
     if payload.get("typ") != "access":
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid auth token type")
+
     subject = payload.get("sub")
-    if not subject:
+    session_id = payload.get("sid")
+    if not subject or not session_id:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid auth token")
 
     repo = AuthRepository(db)
     user = repo.get_user_by_discord_id(int(subject))
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+
+    now = datetime.now(UTC)
+    session = repo.get_active_session(session_id, now)
+    if not session or session.user_id != user.id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session expired or revoked")
+
     request.state.user = user
-    request.state.session_id = payload.get("sid")
+    request.state.session_id = session_id
+    request.state.session_expires_at = session.expires_at
     return user
 
 
