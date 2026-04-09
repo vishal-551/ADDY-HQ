@@ -5,7 +5,8 @@ from collections.abc import Iterable
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Task, TaskCreate, TaskStatus, TaskUpdate
+from app.models import Task, TaskStatus
+from app.schemas import TaskCreate, TaskUpdate
 
 
 class TaskService:

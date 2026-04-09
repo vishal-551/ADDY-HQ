@@ -3,7 +3,8 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, Query, status
 
 from app.database import get_session
-from app.models import TaskCreate, TaskRead, TaskStatus, TaskUpdate
+from app.models import TaskStatus
+from app.schemas import TaskCreate, TaskRead, TaskUpdate
 from app.services.task_service import TaskService
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
