@@ -47,6 +47,14 @@ class AuthTokens(BaseModel):
     expires_at: datetime
 
 
+class RefreshSessionRequest(BaseModel):
+    refresh_token: str | None = None
+
+
+class LogoutAllResponse(BaseModel):
+    revoked_sessions: int
+
+
 class SessionRead(BaseModel):
     session_id: str
     expires_at: datetime

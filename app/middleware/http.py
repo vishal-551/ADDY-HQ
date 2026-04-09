@@ -11,7 +11,7 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.config import settings
-from app.core.request_context import audit_context_var, set_audit_context
+from app.core.request_context import audit_context_var, request_id_var, set_audit_context, set_request_id
 from shared.response_builder import error
 
 
@@ -20,7 +20,11 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
         request_id = request.headers.get("X-Request-ID") or uuid4().hex
         request.state.request_id = request_id
         request.state.started_at = datetime.now(UTC)
-        response = await call_next(request)
+        request_token = request_id_var.set(request_id)
+        try:
+            response = await call_next(request)
+        finally:
+            request_id_var.reset(request_token)
         response.headers["X-Request-ID"] = request_id
         return response
 
@@ -32,8 +36,14 @@ class StructuredLoggingMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next):
         started_at = time.perf_counter()
+        response = None
+        error_type = None
         try:
             response = await call_next(request)
+            return response
+        except Exception as exc:
+            error_type = exc.__class__.__name__
+            raise
         finally:
             elapsed_ms = int((time.perf_counter() - started_at) * 1000)
             self.logger.info(
@@ -41,13 +51,13 @@ class StructuredLoggingMiddleware(BaseHTTPMiddleware):
                 method=request.method,
                 path=request.url.path,
                 query=request.url.query,
-                status_code=getattr(locals().get("response"), "status_code", 500),
+                status_code=getattr(response, "status_code", 500),
                 elapsed_ms=elapsed_ms,
                 request_id=getattr(request.state, "request_id", None),
                 client_ip=request.client.host if request.client else None,
                 user_id=getattr(getattr(request.state, "user", None), "id", None),
+                error_type=error_type,
             )
-        return response
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
@@ -60,7 +70,13 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         if not settings.enable_rate_limiting:
             return await call_next(request)
-        key = request.client.host if request.client else "unknown"
+
+        key_parts = [request.client.host if request.client else "unknown"]
+        session_id = request.cookies.get("session_id")
+        if session_id:
+            key_parts.append(session_id)
+        key = ":".join(key_parts)
+
         now = time.time()
         bucket = self._calls[key]
         while bucket and now - bucket[0] > self.window_seconds:
@@ -81,6 +97,7 @@ class AuditContextMiddleware(BaseHTTPMiddleware):
             "started_at": datetime.now(UTC).isoformat(),
         }
         set_audit_context(request.state.audit_context)
+        set_request_id(request.state.audit_context["request_id"])
         token = audit_context_var.set(request.state.audit_context)
         try:
             return await call_next(request)

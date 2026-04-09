@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from app.models import Session as UserSession
@@ -65,10 +65,29 @@ class AuthRepository:
         query = select(UserSession).where(UserSession.id == sid, UserSession.revoked_at.is_(None), UserSession.expires_at > now)
         return self.db.scalar(query)
 
+    def rotate_session_refresh_hash(self, session_id: str, refresh_hash: str, expires_at: datetime) -> UserSession | None:
+        session = self.db.get(UserSession, session_id)
+        if not session:
+            return None
+        session.refresh_token_hash = refresh_hash
+        session.expires_at = expires_at
+        self.db.flush()
+        self.db.refresh(session)
+        return session
+
     def revoke_session(self, session: UserSession, revoked_at: datetime, reason: str | None = None) -> None:
         session.revoked_at = revoked_at
         session.revoked_reason = reason
         self.db.flush()
+
+    def revoke_all_user_sessions(self, user_id: int, revoked_at: datetime, reason: str) -> int:
+        stmt = (
+            update(UserSession)
+            .where(UserSession.user_id == user_id, UserSession.revoked_at.is_(None))
+            .values(revoked_at=revoked_at, revoked_reason=reason)
+        )
+        result = self.db.execute(stmt)
+        return int(result.rowcount or 0)
 
     def count_sessions(self) -> int:
         return int(self.db.scalar(select(func.count()).select_from(UserSession)) or 0)

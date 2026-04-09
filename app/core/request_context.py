@@ -6,6 +6,7 @@ from typing import Any
 
 
 audit_context_var: ContextVar[dict[str, Any]] = ContextVar("audit_context", default={})
+request_id_var: ContextVar[str | None] = ContextVar("request_id", default=None)
 
 
 @dataclass(slots=True)
@@ -27,3 +28,11 @@ def merge_audit_metadata(metadata: dict[str, Any] | None = None) -> dict[str, An
     if metadata:
         base.update(metadata)
     return base
+
+
+def set_request_id(request_id: str | None) -> None:
+    request_id_var.set(request_id)
+
+
+def get_request_id() -> str | None:
+    return request_id_var.get()
