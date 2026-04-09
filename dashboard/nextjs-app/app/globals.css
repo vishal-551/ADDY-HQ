@@ -17,7 +17,7 @@ body {
   color: var(--text);
 }
 a { color: inherit; text-decoration: none; }
-main { max-width: 1200px; margin: 0 auto; padding: 24px; }
+main { max-width: 1240px; margin: 0 auto; padding: 20px; }
 .nav-shell {
   position: sticky; top: 0; z-index: 20; backdrop-filter: blur(8px);
   display: flex; justify-content: space-between; align-items: center;
@@ -27,7 +27,8 @@ nav { display: flex; gap: 14px; flex-wrap: wrap; }
 .brand { font-size: 1.2rem; font-weight: 700; }
 .nav-link { color: var(--muted); }
 .nav-link:hover { color: var(--text); }
-.btn { border: 1px solid var(--border); background: transparent; color: var(--text); border-radius: 10px; padding: 10px 14px; cursor: pointer; }
+.btn { border: 1px solid var(--border); background: transparent; color: var(--text); border-radius: 10px; padding: 10px 14px; cursor: pointer; transition: all 0.2s ease; }
+.btn:hover { transform: translateY(-1px); }
 .btn-primary { background: linear-gradient(120deg, var(--primary), #8e5cff); border: none; }
 .btn-dark { background: #0d1120; }
 .section { margin: 28px 0; }
@@ -36,11 +37,13 @@ nav { display: flex; gap: 14px; flex-wrap: wrap; }
 .grid { display: grid; gap: 16px; }
 .grid-2 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
 .grid-3 { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
-.card { background: linear-gradient(145deg, var(--panel), var(--panel-2)); border: 1px solid var(--border); border-radius: 16px; padding: 16px; }
+.grid-4 { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+.card { background: linear-gradient(145deg, var(--panel), var(--panel-2)); border: 1px solid var(--border); border-radius: 16px; padding: 16px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.02); }
 .hero { padding: 44px 0 20px; display: grid; grid-template-columns: 1.2fr 1fr; gap: 24px; align-items: center; }
 .hero h1 { font-size: clamp(2rem, 5vw, 3.3rem); margin: 0; }
 .hero p { color: var(--muted); font-size: 1.02rem; }
 .row { display: flex; align-items: center; }
+.space-between { justify-content: space-between; }
 .gap { gap: 10px; }
 .badge { font-size: 0.75rem; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; }
 .badge.free { background: #17372b; color: #78edbf; }
@@ -50,12 +53,94 @@ nav { display: flex; gap: 14px; flex-wrap: wrap; }
 .module-card ul { padding-left: 20px; color: var(--muted); }
 .kpi h3 { margin: 0; font-size: 1.5rem; }
 .mini-chart { display: flex; align-items: flex-end; gap: 6px; height: 140px; }
-.bar { flex: 1; border-radius: 6px 6px 0 0; background: var(--primary); min-height: 12px; }
+.bar { flex: 1; border-radius: 6px 6px 0 0; background: linear-gradient(180deg, #8f84ff, #5d52ca); min-height: 12px; }
 .table { width: 100%; border-collapse: collapse; }
 .table th, .table td { border-bottom: 1px solid var(--border); text-align: left; padding: 10px 8px; }
 .form { display: grid; gap: 12px; }
-.input, select { width: 100%; background: #0d1120; border: 1px solid var(--border); color: var(--text); border-radius: 10px; padding: 10px; }
+.input, select, textarea { width: 100%; background: #0d1120; border: 1px solid var(--border); color: var(--text); border-radius: 10px; padding: 10px; }
 .footer { padding: 30px 24px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; flex-wrap: wrap; }
+
+.dash-root {
+  display: grid;
+  grid-template-columns: 290px 1fr;
+  gap: 16px;
+  min-height: calc(100vh - 120px);
+}
+.dash-sidebar {
+  background: linear-gradient(170deg, #0f1322, #0b0f1c);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 16px;
+  position: sticky;
+  top: 84px;
+  max-height: calc(100vh - 100px);
+  overflow: auto;
+}
+.dash-brand { display: flex; gap: 10px; align-items: center; margin-bottom: 18px; }
+.brand-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: linear-gradient(120deg, #4be4c8, #6f7dff);
+  box-shadow: 0 0 16px #6f7dff88;
+}
+.dash-nav { display: grid; gap: 8px; }
+.dash-nav-title { margin: 18px 0 8px; color: var(--muted); font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.05em; }
+.dash-link {
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  color: #c8d2ff;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.dash-link:hover { border-color: var(--border); background: #12172a; }
+.dash-link-module { font-size: 0.93rem; }
+.dash-content { display: grid; gap: 16px; }
+.dash-topbar {
+  background: linear-gradient(145deg, var(--panel), var(--panel-2));
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+.dash-topbar h1 { margin: 0; font-size: 1.3rem; }
+.dash-topbar-actions { display: flex; gap: 10px; }
+.dash-main-grid { display: grid; gap: 16px; }
+.stat-card h3 { margin: 4px 0; font-size: 1.5rem; }
+.trend { color: #7de7d0; margin: 0; font-size: 0.9rem; }
+.feature-card { display: grid; gap: 8px; }
+.feature-card h3 { margin: 0; }
+.feature-icon { font-size: 1.6rem; }
+.logs-list { display: grid; gap: 10px; }
+.log-row { display: grid; grid-template-columns: 55px 1fr auto; gap: 8px; align-items: center; }
+.log-row p { margin: 0; }
+.chart { width: 100%; height: 180px; }
+.bars { display: flex; align-items: flex-end; gap: 8px; height: 180px; }
+.module-tile { display: grid; gap: 12px; }
+.toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.toggle {
+  width: 52px;
+  height: 30px;
+  border-radius: 999px;
+  background: #323a59;
+  border: 1px solid var(--border);
+  padding: 2px;
+  display: flex;
+  align-items: center;
+}
+.toggle.enabled { justify-content: flex-end; background: linear-gradient(120deg, #4be4c8, #6f7dff); }
+.knob { width: 24px; height: 24px; border-radius: 999px; background: white; display: block; }
+
+@media (max-width: 1100px) {
+  .dash-root { grid-template-columns: 1fr; }
+  .dash-sidebar { position: static; max-height: unset; }
+}
 @media (max-width: 900px) {
   .hero { grid-template-columns: 1fr; }
+  .dash-topbar { flex-direction: column; align-items: flex-start; }
 }
