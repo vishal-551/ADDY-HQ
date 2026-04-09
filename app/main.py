@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -33,13 +34,20 @@ async def lifespan(_: FastAPI):
 
 
 def _build_cors_origins() -> list[str]:
-    origins = {settings.frontend_url, settings.discord_redirect_uri.rsplit("/", 1)[0]}
+    env_origins = {item.strip() for item in os.getenv("CORS_ALLOW_ORIGINS", "").split(",") if item.strip()}
+    origins = {
+        settings.frontend_url,
+        settings.app_url,
+        settings.api_url,
+        settings.discord_redirect_uri.rsplit("/", 1)[0],
+        *env_origins,
+    }
     return [origin for origin in origins if origin]
 
 
 def create_app() -> FastAPI:
     configure_logging()
-    app = FastAPI(title=settings.app_name, version="2.1.0", lifespan=lifespan)
+    app = FastAPI(title=settings.app_name, version="2.2.0", lifespan=lifespan)
 
     app.add_middleware(
         CORSMiddleware,

@@ -30,6 +30,8 @@ class AuthService:
             username=user_data.get("username", f"user-{discord_id}"),
             avatar=user_data.get("avatar"),
             is_admin=is_admin,
+            discriminator=user_data.get("discriminator"),
+            email=user_data.get("email"),
         )
 
         session_id = generate_session_id()
@@ -58,4 +60,4 @@ class AuthService:
     def logout(self, session_id: str) -> None:
         session = self.repo.get_session(session_id)
         if session:
-            self.repo.revoke_session(session, datetime.now(UTC))
+            self.repo.revoke_session(session, datetime.now(UTC), reason="user_logout")

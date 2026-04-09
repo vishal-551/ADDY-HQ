@@ -46,6 +46,10 @@ def get_current_user(
     if not subject or not session_id:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid auth token")
 
+    session_cookie = request.cookies.get("session_id")
+    if session_cookie and session_cookie != session_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session token mismatch")
+
     repo = AuthRepository(db)
     user = repo.get_user_by_discord_id(int(subject))
     if not user:

@@ -9,6 +9,7 @@ from typing import Any
 from jose import JWTError, jwt
 
 from app.config import settings
+from shared.security import hash_password, verify_password
 
 
 class InvalidTokenError(Exception):
@@ -61,7 +62,13 @@ def generate_session_id() -> str:
 
 
 def hash_token(token: str) -> str:
-    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+    digest = hashlib.sha256(token.encode("utf-8")).hexdigest()
+    return hash_password(digest)
+
+
+def verify_token_hash(raw_token: str, hashed_token: str) -> bool:
+    digest = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+    return verify_password(digest, hashed_token)
 
 
 def create_oauth_state(ttl_seconds: int = 600) -> str:
