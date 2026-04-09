@@ -17,7 +17,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 @router.get("/login", response_model=DiscordLoginResponse)
 def login(response: Response, db: Session = Depends(get_db_session)):
     state = create_oauth_state()
-    response.set_cookie("oauth_state", state, httponly=True, max_age=600, samesite=settings.cookie_samesite)
+    response.set_cookie("oauth_state", state, httponly=True, max_age=600, samesite=settings.cookie_samesite, secure=settings.cookie_secure)
     return {"auth_url": AuthService(db).discord_auth_url(state)}
 
 
@@ -42,15 +42,33 @@ async def callback(
 
     response = RedirectResponse(f"{settings.frontend_url}/dashboard", status_code=302)
     response.delete_cookie("oauth_state")
-    for key in ("access_token", "refresh_token", "session_id"):
-        response.set_cookie(
-            key,
-            result[key],
-            httponly=True,
-            secure=settings.cookie_secure,
-            samesite=settings.cookie_samesite,
-            domain=settings.cookie_domain,
-        )
+    response.set_cookie(
+        "access_token",
+        result["access_token"],
+        httponly=True,
+        secure=settings.cookie_secure,
+        samesite=settings.cookie_samesite,
+        domain=settings.cookie_domain,
+        max_age=settings.jwt_access_ttl_minutes * 60,
+    )
+    response.set_cookie(
+        "refresh_token",
+        result["refresh_token"],
+        httponly=True,
+        secure=settings.cookie_secure,
+        samesite=settings.cookie_samesite,
+        domain=settings.cookie_domain,
+        max_age=settings.jwt_refresh_ttl_days * 86400,
+    )
+    response.set_cookie(
+        "session_id",
+        result["session_id"],
+        httponly=True,
+        secure=settings.cookie_secure,
+        samesite=settings.cookie_samesite,
+        domain=settings.cookie_domain,
+        max_age=settings.jwt_refresh_ttl_days * 86400,
+    )
     return response
 
 

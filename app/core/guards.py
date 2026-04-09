@@ -37,3 +37,8 @@ def ensure_owner_or_admin(user_discord_id: int, guild_owner_discord_id: int, is_
 
 def ensure_guild_access(user_discord_id: int, guild_owner_discord_id: int) -> None:
     ensure_owner_or_admin(user_discord_id=user_discord_id, guild_owner_discord_id=guild_owner_discord_id, is_admin=False)
+
+
+def ensure_platform_admin(is_admin: bool) -> None:
+    if not is_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Platform admin required")
