@@ -10,7 +10,13 @@ from app.database import get_session
 from app.services.task_service import TaskService
 
 router = APIRouter(tags=["dashboard"])
-templates = Jinja2Templates(directory="app/dashboard/templates")
+
+
+def _get_templates() -> Jinja2Templates | None:
+    try:
+        return Jinja2Templates(directory="app/dashboard/templates")
+    except AssertionError:
+        return None
 
 
 @router.get("/dashboard", response_class=HTMLResponse)
@@ -21,6 +27,10 @@ def dashboard(request: Request):
 
     status_counts = Counter(task.status.value for task in tasks)
     priority_counts = Counter(task.priority.value for task in tasks)
+
+    templates = _get_templates()
+    if templates is None:
+        return HTMLResponse("<html><body><h1>Dashboard</h1><p>Template engine not installed.</p></body></html>")
 
     return templates.TemplateResponse(
         request=request,
