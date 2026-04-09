@@ -11,7 +11,7 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.config import settings
-from app.core.request_context import audit_context_var
+from app.core.request_context import audit_context_var, set_audit_context
 from shared.response_builder import error
 
 
@@ -80,6 +80,7 @@ class AuditContextMiddleware(BaseHTTPMiddleware):
             "ip": request.client.host if request.client else None,
             "started_at": datetime.now(UTC).isoformat(),
         }
+        set_audit_context(request.state.audit_context)
         token = audit_context_var.set(request.state.audit_context)
         try:
             return await call_next(request)

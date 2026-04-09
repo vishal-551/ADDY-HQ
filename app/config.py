@@ -10,6 +10,8 @@ from shared.config import get_settings
 class AppSettings:
     app_name: str
     app_env: str
+    app_url: str
+    api_url: str
     database_url: str
     sync_database_url: str
     jwt_secret: str
@@ -37,6 +39,8 @@ except Exception:
 settings = AppSettings(
     app_name=_shared.app_name if _shared else os.getenv("APP_NAME", "ADDY HQ"),
     app_env=_shared.app_env.value if _shared else os.getenv("APP_ENV", "development"),
+    app_url=_shared.app_url if _shared else os.getenv("APP_URL", "http://localhost:3000"),
+    api_url=_shared.api_url if _shared else os.getenv("API_URL", "http://localhost:8000"),
     database_url=_shared.database_url if _shared else os.getenv("DATABASE_URL", "sqlite:///./addy_hq.db"),
     sync_database_url=_shared.sync_database_url if _shared else os.getenv("SYNC_DATABASE_URL", "sqlite:///./addy_hq.db"),
     jwt_secret=_shared.jwt_secret if _shared else os.getenv("JWT_SECRET", "dev-insecure-secret-change-me"),
@@ -49,7 +53,7 @@ settings = AppSettings(
     discord_api_base=_shared.discord_api_base if _shared else os.getenv("DISCORD_API_BASE", "https://discord.com/api/v10"),
     frontend_url=_shared.app_url if _shared else os.getenv("APP_URL", "http://localhost:3000"),
     admin_user_ids=frozenset(_shared.discord_owner_id_set) if _shared else frozenset(int(x.strip()) for x in os.getenv("DISCORD_OWNER_IDS", "").split(",") if x.strip().isdigit()),
-    rate_limit_per_minute=120,
+    rate_limit_per_minute=int(os.getenv("RATE_LIMIT_PER_MINUTE", "120")),
     cookie_domain=_shared.cookie_domain if _shared else os.getenv("COOKIE_DOMAIN", "localhost"),
     cookie_secure=_shared.cookie_secure if _shared else os.getenv("COOKIE_SECURE", "false").lower() == "true",
     cookie_samesite=_shared.cookie_samesite if _shared else os.getenv("COOKIE_SAMESITE", "lax"),

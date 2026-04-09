@@ -56,7 +56,9 @@ class UserRead(BaseModel):
     id: int
     discord_id: int
     username: str
+    discriminator: str | None = None
     avatar: str | None
+    email: str | None = None
     is_admin: bool
 
     model_config = {"from_attributes": True}

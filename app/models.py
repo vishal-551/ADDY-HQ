@@ -10,27 +10,14 @@ from sqlalchemy import (
     DateTime,
     Enum as SAEnum,
     ForeignKey,
-    Integer,
     Numeric,
     String,
     Text,
     UniqueConstraint,
-    func,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.database import Base
-
-
-class IDMixin:
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-
-
-class TimestampMixin:
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
-    )
+from app.database import Base, IDMixin, TimestampMixin
 
 
 class TaskStatus(str, Enum):
@@ -93,10 +80,13 @@ class User(Base, IDMixin, TimestampMixin):
     discriminator: Mapped[str | None] = mapped_column(String(10), nullable=True)
     avatar: Mapped[str | None] = mapped_column(String(255), nullable=True)
     email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     sessions: Mapped[list[Session]] = relationship(back_populates="user", cascade="all, delete-orphan")
     access_grants: Mapped[list[GuildAccessGrant]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    customer_identities: Mapped[list[CustomerIdentity]] = relationship(back_populates="user")
+    audit_logs: Mapped[list[AuditLog]] = relationship(back_populates="actor_user")
 
 
 class Session(Base, TimestampMixin):
@@ -109,6 +99,7 @@ class Session(Base, TimestampMixin):
     user_agent: Mapped[str | None] = mapped_column(String(255), nullable=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    revoked_reason: Mapped[str | None] = mapped_column(String(120), nullable=True)
 
     user: Mapped[User] = relationship(back_populates="sessions")
 
@@ -128,6 +119,7 @@ class Guild(Base, TimestampMixin):
     premium: Mapped[GuildPremium | None] = relationship(back_populates="guild", uselist=False, cascade="all, delete-orphan")
     access_grants: Mapped[list[GuildAccessGrant]] = relationship(back_populates="guild", cascade="all, delete-orphan")
     customer_identities: Mapped[list[CustomerIdentity]] = relationship(back_populates="guild")
+    audit_logs: Mapped[list[AuditLog]] = relationship(back_populates="guild")
 
 
 class GuildGeneralSettings(Base, IDMixin, TimestampMixin):
@@ -195,6 +187,7 @@ class CustomerIdentity(Base, IDMixin, TimestampMixin):
     provider_customer_id: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
     email: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
+    user: Mapped[User | None] = relationship(back_populates="customer_identities")
     guild: Mapped[Guild | None] = relationship(back_populates="customer_identities")
 
 
@@ -208,6 +201,9 @@ class AuditLog(Base, IDMixin, TimestampMixin):
     resource: Mapped[str | None] = mapped_column(String(120), nullable=True)
     resource_id: Mapped[str | None] = mapped_column(String(120), nullable=True)
     metadata_json: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
+
+    actor_user: Mapped[User | None] = relationship(back_populates="audit_logs")
+    guild: Mapped[Guild | None] = relationship(back_populates="audit_logs")
 
 
 GuildSettings = GuildGeneralSettings

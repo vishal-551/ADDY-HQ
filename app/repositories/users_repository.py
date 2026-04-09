@@ -16,14 +16,31 @@ class UsersRepository:
     def get_by_discord_id(self, discord_id: int) -> User | None:
         return self.db.scalar(select(User).where(User.discord_id == discord_id))
 
-    def upsert_discord_user(self, discord_id: int, username: str, avatar: str | None, is_admin: bool) -> User:
+    def upsert_discord_user(
+        self,
+        discord_id: int,
+        username: str,
+        avatar: str | None,
+        is_admin: bool,
+        discriminator: str | None = None,
+        email: str | None = None,
+    ) -> User:
         user = self.get_by_discord_id(discord_id)
         if user:
             user.username = username
             user.avatar = avatar
             user.is_admin = is_admin
+            user.discriminator = discriminator
+            user.email = email
         else:
-            user = User(discord_id=discord_id, username=username, avatar=avatar, is_admin=is_admin)
+            user = User(
+                discord_id=discord_id,
+                username=username,
+                avatar=avatar,
+                is_admin=is_admin,
+                discriminator=discriminator,
+                email=email,
+            )
             self.db.add(user)
         self.db.flush()
         self.db.refresh(user)

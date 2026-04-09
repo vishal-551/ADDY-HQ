@@ -18,8 +18,23 @@ class AuthRepository:
     def get_user_by_discord_id(self, discord_id: int) -> User | None:
         return self.users.get_by_discord_id(discord_id)
 
-    def upsert_user(self, discord_id: int, username: str, avatar: str | None, is_admin: bool) -> User:
-        return self.users.upsert_discord_user(discord_id, username, avatar, is_admin)
+    def upsert_user(
+        self,
+        discord_id: int,
+        username: str,
+        avatar: str | None,
+        is_admin: bool,
+        discriminator: str | None = None,
+        email: str | None = None,
+    ) -> User:
+        return self.users.upsert_discord_user(
+            discord_id=discord_id,
+            username=username,
+            avatar=avatar,
+            is_admin=is_admin,
+            discriminator=discriminator,
+            email=email,
+        )
 
     def create_session(
         self,
@@ -50,8 +65,9 @@ class AuthRepository:
         query = select(UserSession).where(UserSession.id == sid, UserSession.revoked_at.is_(None), UserSession.expires_at > now)
         return self.db.scalar(query)
 
-    def revoke_session(self, session: UserSession, revoked_at: datetime) -> None:
+    def revoke_session(self, session: UserSession, revoked_at: datetime, reason: str | None = None) -> None:
         session.revoked_at = revoked_at
+        session.revoked_reason = reason
         self.db.flush()
 
     def count_sessions(self) -> int:
