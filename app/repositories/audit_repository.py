@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models import AuditLog
@@ -31,4 +32,14 @@ class AuditRepository:
         )
         self.db.add(log)
         self.db.flush()
+        self.db.refresh(log)
         return log
+
+    def list_logs(self, guild_id: int | None = None, limit: int = 100) -> list[AuditLog]:
+        stmt = select(AuditLog).order_by(AuditLog.created_at.desc()).limit(limit)
+        if guild_id is not None:
+            stmt = stmt.where(AuditLog.guild_id == guild_id)
+        return list(self.db.scalars(stmt).all())
+
+    def count_logs(self) -> int:
+        return int(self.db.scalar(select(func.count()).select_from(AuditLog)) or 0)

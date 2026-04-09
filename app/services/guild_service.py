@@ -16,12 +16,5 @@ class GuildService:
         guild = self.repo.get_guild(guild_id)
         if not guild:
             return None
-        settings = self.repo.get_or_create_settings(guild_id)
+        settings = self.repo.get_or_create_general_settings(guild_id)
         return {"guild": guild, "settings": settings}
-
-    def update_settings(self, guild_id: int, payload: dict):
-        settings = self.repo.get_or_create_settings(guild_id)
-        for key, val in payload.items():
-            if hasattr(settings, key):
-                setattr(settings, key, val)
-        return self.repo.save_settings(settings)

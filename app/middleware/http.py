@@ -11,6 +11,16 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from app.config import settings
 
 
+class RequestContextMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        request_id = f"req_{int(time.time() * 1000)}"
+        request.state.request_id = request_id
+        request.state.started_at = datetime.now(UTC)
+        response = await call_next(request)
+        response.headers["X-Request-ID"] = request_id
+        return response
+
+
 class RateLimitMiddleware(BaseHTTPMiddleware):
     def __init__(self, app):
         super().__init__(app)
@@ -19,6 +29,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self._calls: dict[str, deque[float]] = defaultdict(deque)
 
     async def dispatch(self, request: Request, call_next):
+        if not settings.enable_rate_limiting:
+            return await call_next(request)
         key = request.client.host if request.client else "unknown"
         now = time.time()
         bucket = self._calls[key]
@@ -35,7 +47,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 class AuditContextMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         request.state.audit_context = {
-            "request_id": f"req_{int(time.time() * 1000)}",
+            "request_id": getattr(request.state, "request_id", f"req_{int(time.time() * 1000)}"),
             "path": request.url.path,
             "method": request.method,
             "ip": request.client.host if request.client else None,
