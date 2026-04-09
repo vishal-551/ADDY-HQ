@@ -7,21 +7,15 @@ import httpx
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.core.jwt_utils import (
-    create_access_token,
-    create_refresh_token,
-    generate_session_id,
-    hash_token,
-)
+from app.core.jwt_utils import create_access_token, create_refresh_token, generate_session_id, hash_token
 from app.repositories.auth_repository import AuthRepository
 
 
-class AuthService:
+class DiscordOAuthService:
     def __init__(self, db: Session):
         self.db = db
-        self.repo = AuthRepository(db)
 
-    def discord_auth_url(self, state: str) -> str:
+    def auth_url(self, state: str) -> str:
         query = urlencode(
             {
                 "client_id": settings.discord_client_id,
@@ -60,8 +54,20 @@ class AuthService:
                 headers={"Authorization": f"Bearer {token_data['access_token']}"},
             )
             user_resp.raise_for_status()
-            user_data = user_resp.json()
-            return token_data, user_data
+            return token_data, user_resp.json()
+
+
+class AuthService:
+    def __init__(self, db: Session):
+        self.db = db
+        self.repo = AuthRepository(db)
+        self.oauth = DiscordOAuthService(db)
+
+    def discord_auth_url(self, state: str) -> str:
+        return self.oauth.auth_url(state)
+
+    async def exchange_code(self, code: str) -> tuple[dict, dict]:
+        return await self.oauth.exchange_code(code)
 
     def finalize_login(self, user_data: dict, ip_address: str | None, user_agent: str | None) -> dict:
         discord_id = int(user_data["id"])
@@ -98,6 +104,5 @@ class AuthService:
 
     def logout(self, session_id: str) -> None:
         session = self.repo.get_session(session_id)
-        if not session:
-            return
-        self.repo.revoke_session(session, datetime.now(UTC))
+        if session:
+            self.repo.revoke_session(session, datetime.now(UTC))
