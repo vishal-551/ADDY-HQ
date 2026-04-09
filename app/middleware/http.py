@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import time
 from collections import defaultdict, deque
 from datetime import UTC, datetime
@@ -7,12 +8,12 @@ from uuid import uuid4
 
 import structlog
 from fastapi import HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.config import settings
 from app.core.request_context import audit_context_var, request_id_var, set_audit_context, set_request_id
-from shared.response_builder import error
+from shared.response_builder import error, ok
 
 
 class RequestContextMiddleware(BaseHTTPMiddleware):
@@ -58,6 +59,41 @@ class StructuredLoggingMiddleware(BaseHTTPMiddleware):
                 user_id=getattr(getattr(request.state, "user", None), "id", None),
                 error_type=error_type,
             )
+
+
+class ResponseEnvelopeMiddleware(BaseHTTPMiddleware):
+    """Normalizes successful JSON responses to the shared {ok,data} shape."""
+
+    _SKIP_PATH_PREFIXES = ("/docs", "/openapi.json", "/redoc")
+
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+
+        if request.url.path.startswith(self._SKIP_PATH_PREFIXES):
+            return response
+        if response.status_code >= 400:
+            return response
+        if not isinstance(response, JSONResponse):
+            return response
+
+        media_type = response.media_type or ""
+        if "application/json" not in media_type:
+            return response
+
+        raw_body = getattr(response, "body", b"")
+        if not raw_body:
+            return response
+
+        try:
+            parsed = json.loads(raw_body)
+        except json.JSONDecodeError:
+            return response
+
+        if isinstance(parsed, dict) and "ok" in parsed:
+            return response
+
+        wrapped = ok(parsed)
+        return JSONResponse(content=wrapped, status_code=response.status_code, headers=dict(response.headers))
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):

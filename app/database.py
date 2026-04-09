@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Generator
+from typing import Any
 from contextlib import contextmanager
 from datetime import datetime
 
@@ -41,7 +42,17 @@ def _sqlite_connect_args(url: str) -> dict[str, bool]:
     return {"check_same_thread": False} if url.startswith("sqlite") else {}
 
 
-engine = create_engine(settings.sync_database_url, connect_args=_sqlite_connect_args(settings.sync_database_url), future=True)
+def _engine_kwargs(url: str) -> dict[str, Any]:
+    kwargs: dict[str, Any] = {"future": True}
+    connect_args = _sqlite_connect_args(url)
+    if connect_args:
+        kwargs["connect_args"] = connect_args
+    if not url.startswith("sqlite"):
+        kwargs["pool_pre_ping"] = True
+    return kwargs
+
+
+engine = create_engine(settings.sync_database_url, **_engine_kwargs(settings.sync_database_url))
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, expire_on_commit=False, future=True)
 
 
@@ -60,7 +71,7 @@ def _resolve_async_url() -> str:
 
 def _create_async_engine() -> AsyncEngine | None:
     try:
-        return create_async_engine(_resolve_async_url(), future=True)
+        return create_async_engine(_resolve_async_url(), **_engine_kwargs(_resolve_async_url()))
     except ModuleNotFoundError:
         return None
 

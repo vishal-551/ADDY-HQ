@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hmac
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
@@ -30,6 +32,7 @@ def _set_auth_cookies(response: Response, tokens: dict) -> None:
         secure=settings.cookie_secure,
         samesite=settings.cookie_samesite,
         domain=settings.cookie_domain,
+        path="/",
         max_age=settings.jwt_access_ttl_minutes * 60,
     )
     response.set_cookie(
@@ -39,6 +42,7 @@ def _set_auth_cookies(response: Response, tokens: dict) -> None:
         secure=settings.cookie_secure,
         samesite=settings.cookie_samesite,
         domain=settings.cookie_domain,
+        path="/",
         max_age=settings.jwt_refresh_ttl_days * 86400,
     )
     response.set_cookie(
@@ -48,14 +52,15 @@ def _set_auth_cookies(response: Response, tokens: dict) -> None:
         secure=settings.cookie_secure,
         samesite=settings.cookie_samesite,
         domain=settings.cookie_domain,
+        path="/",
         max_age=settings.jwt_refresh_ttl_days * 86400,
     )
 
 
 def _clear_auth_cookies(response: Response) -> None:
-    response.delete_cookie("access_token", domain=settings.cookie_domain)
-    response.delete_cookie("refresh_token", domain=settings.cookie_domain)
-    response.delete_cookie("session_id", domain=settings.cookie_domain)
+    response.delete_cookie("access_token", domain=settings.cookie_domain, path="/")
+    response.delete_cookie("refresh_token", domain=settings.cookie_domain, path="/")
+    response.delete_cookie("session_id", domain=settings.cookie_domain, path="/")
 
 
 @router.get("/login", response_model=DiscordLoginResponse)
@@ -68,6 +73,7 @@ def login(response: Response, db: Session = Depends(get_db_session)):
         max_age=600,
         samesite=settings.cookie_samesite,
         secure=settings.cookie_secure,
+        path="/",
     )
     return {"auth_url": AuthService(db).discord_auth_url(state)}
 
@@ -80,7 +86,7 @@ async def callback(
     db: Session = Depends(get_db_session),
 ):
     cookie_state = request.cookies.get("oauth_state")
-    if not cookie_state or cookie_state != state:
+    if not cookie_state or not hmac.compare_digest(cookie_state, state):
         raise HTTPException(status_code=400, detail="OAuth state mismatch")
     try:
         verify_oauth_state(state)
@@ -92,7 +98,7 @@ async def callback(
     result = service.finalize_login(user_data, request.client.host if request.client else None, request.headers.get("user-agent"))
 
     response = RedirectResponse(f"{settings.frontend_url}/dashboard", status_code=302)
-    response.delete_cookie("oauth_state")
+    response.delete_cookie("oauth_state", path="/")
     _set_auth_cookies(response, result)
     return response
 
@@ -137,3 +143,5 @@ def me(request: Request, user: User = Depends(get_current_user)):
 
 router.add_api_route("/discord/login", login, methods=["GET"], response_model=DiscordLoginResponse)
 router.add_api_route("/discord/callback", callback, methods=["GET"])
+
+router.add_api_route("/discord/logout", logout, methods=["POST"])
