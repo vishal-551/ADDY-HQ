@@ -16,6 +16,7 @@ from app.middleware.http import (
     ErrorHandlingMiddleware,
     RateLimitMiddleware,
     RequestContextMiddleware,
+    ResponseEnvelopeMiddleware,
     StructuredLoggingMiddleware,
 )
 from app.routes import admin, auth, bot, dashboard, guilds, preview, tasks
@@ -62,6 +63,7 @@ def create_app() -> FastAPI:
     app.add_middleware(RequestContextMiddleware)
     app.add_middleware(AuditContextMiddleware)
     app.add_middleware(StructuredLoggingMiddleware)
+    app.add_middleware(ResponseEnvelopeMiddleware)
     app.add_middleware(RateLimitMiddleware)
     register_exception_handlers(app)
 

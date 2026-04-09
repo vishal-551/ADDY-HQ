@@ -15,10 +15,11 @@ def register_exception_handlers(app: FastAPI) -> None:
     async def validation_handler(_: Request, exc: RequestValidationError):
         return JSONResponse(
             status_code=422,
-            content={
-                "ok": False,
-                "error": {"code": "validation_error", "message": "Request validation failed", "details": exc.errors()},
-            },
+            content=error(
+                "validation_error",
+                "Request validation failed",
+                details={"errors": exc.errors(), "request_id": get_request_id()},
+            ),
         )
 
     @app.exception_handler(InvalidTokenError)
