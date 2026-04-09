@@ -20,11 +20,11 @@ class Settings(BaseSettings):
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
     log_json: bool = Field(default=False, alias="LOG_JSON")
 
-    database_url: str = Field(alias="DATABASE_URL")
-    sync_database_url: str = Field(alias="SYNC_DATABASE_URL")
+    database_url: str = Field(default="sqlite:///./addy_hq.db", alias="DATABASE_URL")
+    sync_database_url: str = Field(default="sqlite:///./addy_hq.db", alias="SYNC_DATABASE_URL")
     redis_url: str = Field(default="redis://localhost:6379/0", alias="REDIS_URL")
 
-    jwt_secret: str = Field(alias="JWT_SECRET")
+    jwt_secret: str = Field(default="dev-insecure-secret-change-me", alias="JWT_SECRET")
     jwt_algorithm: str = Field(default="HS256", alias="JWT_ALGORITHM")
     jwt_access_ttl_minutes: int = Field(default=30, alias="JWT_ACCESS_TTL_MINUTES")
     jwt_refresh_ttl_days: int = Field(default=14, alias="JWT_REFRESH_TTL_DAYS")

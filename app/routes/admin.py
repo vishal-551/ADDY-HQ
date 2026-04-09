@@ -17,7 +17,13 @@ from app.services.audit_service import AdminStatsService, AuditService
 from app.services.bot_config_service import BotConfigService
 
 router = APIRouter(prefix="/admin", tags=["admin"])
-templates = Jinja2Templates(directory="app/dashboard/templates")
+
+
+def _get_templates() -> Jinja2Templates | None:
+    try:
+        return Jinja2Templates(directory="app/dashboard/templates")
+    except AssertionError:
+        return None
 
 
 @router.get("/stats", response_model=AdminStatsRead)
@@ -97,4 +103,7 @@ def admin_activate_bot(bot_id: int, admin=Depends(require_admin), db: Session = 
 
 @router.get("/panel/bots", response_class=HTMLResponse, include_in_schema=False)
 def admin_bots_page(request: Request, _: object = Depends(require_admin)):
+    templates = _get_templates()
+    if templates is None:
+        return HTMLResponse("<html><body><h1>Admin Bots</h1><p>Template engine not installed.</p></body></html>")
     return templates.TemplateResponse(request=request, name="admin_bots.html", context={})

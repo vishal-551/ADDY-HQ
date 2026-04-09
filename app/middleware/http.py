@@ -106,10 +106,13 @@ class AuditContextMiddleware(BaseHTTPMiddleware):
 
 
 class ErrorHandlingMiddleware(BaseHTTPMiddleware):
+    logger = structlog.get_logger("api.errors")
+
     async def dispatch(self, request: Request, call_next):
         try:
             return await call_next(request)
         except HTTPException:
             raise
         except Exception:  # pragma: no cover - fallback for middleware stack exceptions
+            self.logger.exception("request.unhandled_exception", path=request.url.path, method=request.method)
             return JSONResponse(error("internal_error", "Internal server error"), status_code=500)

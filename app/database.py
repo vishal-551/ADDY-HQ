@@ -5,7 +5,7 @@ from contextlib import contextmanager
 from datetime import datetime
 
 from sqlalchemy import DateTime, MetaData, create_engine, func
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 
 from app.config import settings
@@ -42,7 +42,7 @@ def _sqlite_connect_args(url: str) -> dict[str, bool]:
 
 
 engine = create_engine(settings.sync_database_url, connect_args=_sqlite_connect_args(settings.sync_database_url), future=True)
-SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
+SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, expire_on_commit=False, future=True)
 
 
 def _resolve_async_url() -> str:
@@ -51,13 +51,26 @@ def _resolve_async_url() -> str:
         return url
     if url.startswith("postgresql://"):
         return url.replace("postgresql://", "postgresql+psycopg://", 1)
-    if url.startswith("sqlite://"):
+    if url.startswith("sqlite+aiosqlite://"):
         return url
+    if url.startswith("sqlite://"):
+        return url.replace("sqlite://", "sqlite+aiosqlite://", 1)
     return url
 
 
-async_engine = create_async_engine(_resolve_async_url(), future=True)
-AsyncSessionLocal = async_sessionmaker(bind=async_engine, class_=AsyncSession, autoflush=False, expire_on_commit=False)
+def _create_async_engine() -> AsyncEngine | None:
+    try:
+        return create_async_engine(_resolve_async_url(), future=True)
+    except ModuleNotFoundError:
+        return None
+
+
+async_engine = _create_async_engine()
+AsyncSessionLocal = (
+    async_sessionmaker(bind=async_engine, class_=AsyncSession, autoflush=False, expire_on_commit=False)
+    if async_engine is not None
+    else None
+)
 
 
 def get_db() -> Generator:
@@ -86,6 +99,8 @@ def get_session():
 
 
 async def get_async_db() -> Generator[AsyncSession, None, None]:
+    if AsyncSessionLocal is None:
+        raise RuntimeError("Async database driver is not installed. Configure DATABASE_URL with an async driver.")
     async with AsyncSessionLocal() as session:
         try:
             yield session

@@ -29,7 +29,8 @@ async def lifespan(_: FastAPI):
     try:
         yield
     finally:
-        await async_engine.dispose()
+        if async_engine is not None:
+            await async_engine.dispose()
         engine.dispose()
 
 
@@ -47,6 +48,7 @@ def _build_cors_origins() -> list[str]:
 
 def create_app() -> FastAPI:
     configure_logging()
+    Base.metadata.create_all(bind=engine)
     app = FastAPI(title=settings.app_name, version="2.2.0", lifespan=lifespan)
 
     app.add_middleware(
