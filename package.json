@@ -1,0 +1,21 @@
+{
+  "name": "addy-ai-system",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Addy monorepo scripts",
+  "scripts": {
+    "dashboard:dev": "npm --prefix dashboard/nextjs-app run dev",
+    "dashboard:build": "npm --prefix dashboard/nextjs-app run build",
+    "dashboard:start": "npm --prefix dashboard/nextjs-app run start",
+    "dashboard:lint": "npm --prefix dashboard/nextjs-app run lint",
+    "api:dev": "uvicorn api.main:app --reload --host 0.0.0.0 --port 8000",
+    "bot:dev": "python run_bot.py",
+    "workers:dev": "python -m workers",
+    "test": "pytest -q",
+    "lint": "ruff check ."
+  },
+  "engines": {
+    "node": ">=20.10.0",
+    "npm": ">=10.2.0"
+  }
+}
