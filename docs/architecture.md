@@ -1,0 +1,3 @@
+# Addy Architecture
+
+Placeholder documentation.
